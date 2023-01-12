@@ -9,6 +9,7 @@
 		"start": "rollup --configPlugin typescript -c -w",
 		"dev": "npm start",
 		"build": "rollup --configPlugin typescript -c",
+		"lint": "eslint --ext .js,.jsx,.ts,.tsx src",
 		"prepare": "npm run build"
 	},
 	"repository": {
@@ -33,7 +34,11 @@
 		"@rollup/plugin-node-resolve": "^15.0.1",
 		"@rollup/plugin-typescript": "^9.0.2",
 		"@types/react": "^18.0.25",
+		"@typescript-eslint/parser": "^5.48.1",
 		"babel-loader": "^9.1.0",
+		"eslint": "^8.31.0",
+		"eslint-plugin-react": "^7.32.0",
+		"eslint-plugin-react-hooks": "^4.6.0",
 		"prettier": "^2.7.1",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
@@ -48,5 +53,8 @@
 	},
 	"files": [
 		"/dist/"
-	]
+	],
+	"dependencies": {
+		"react-screen-wake-lock": "^3.0.1"
+	}
 }
