@@ -1,1 +1,2 @@
-console.log('Test')
+export * from './KeepAwake'
+export * from './useKeepAwake'
