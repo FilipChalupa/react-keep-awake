@@ -55,6 +55,6 @@
 		"/dist/"
 	],
 	"dependencies": {
-		"react-screen-wake-lock": "^3.0.1"
+		"react-screen-wake-lock": "^3.0.2"
 	}
 }
