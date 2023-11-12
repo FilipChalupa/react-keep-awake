@@ -1,4 +1,4 @@
-# Reack keep awake [![npm](https://img.shields.io/npm/v/react-keep-awake.svg)](https://www.npmjs.com/package/react-keep-awake) ![npm type definitions](https://img.shields.io/npm/types/react-keep-awake.svg)
+# React keep awake [![npm](https://img.shields.io/npm/v/react-keep-awake.svg)](https://www.npmjs.com/package/react-keep-awake) ![npm type definitions](https://img.shields.io/npm/types/react-keep-awake.svg)
 
 React component and hook to keep screen awake using [Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).
 
