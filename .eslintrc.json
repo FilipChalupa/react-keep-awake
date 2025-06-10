@@ -1,4 +1,13 @@
 {
+	"env": {
+		"browser": true,
+		"es2020": true
+	},
+	"settings": {
+		"react": {
+			"version": "detect"
+		}
+	},
 	"parser": "@typescript-eslint/parser",
 	"extends": ["eslint:recommended", "plugin:react/recommended"],
 	"plugins": ["react-hooks"],

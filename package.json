@@ -53,5 +53,8 @@
 	},
 	"files": [
 		"/dist/"
-	]
+	],
+	"dependencies": {
+		"@types/dom-screen-wake-lock": "^1.0.3"
+	}
 }
