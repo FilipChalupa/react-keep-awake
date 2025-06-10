@@ -1,20 +1,14 @@
 import { useEffect } from 'react'
-import { useWakeLock } from 'react-screen-wake-lock'
+import { requestWakeLock } from './requestWakeLock'
 
 export const useKeepAwake = (active = true) => {
-	const { isSupported, released, request, release } = useWakeLock()
-
 	useEffect(() => {
-		if (!isSupported) {
+		if (!active) {
 			return
 		}
-
-		if (active === released) {
-			if (active) {
-				request()
-			} else {
-				release()
-			}
+		const release = requestWakeLock()
+		return () => {
+			release()
 		}
-	}, [active, isSupported, release, released, request])
+	}, [active])
 }
