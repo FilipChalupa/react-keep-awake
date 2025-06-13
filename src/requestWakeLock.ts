@@ -3,9 +3,7 @@ let activeWakeLocks = 0
 let wakeLock: WakeLockSentinel | null = null
 
 const handleVisibilityChange = () => {
-	if (document.visibilityState === 'visible') {
-		request()
-	}
+	request()
 }
 
 const activate = () => {
@@ -19,6 +17,9 @@ const deactivate = () => {
 }
 
 const request = async () => {
+	if (document.visibilityState !== 'visible') {
+		return
+	}
 	if (wakeLock) {
 		return
 	}
