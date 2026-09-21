@@ -63,12 +63,21 @@ import { setKeepAwakeStrategy } from 'react-keep-awake'
 setKeepAwakeStrategy({
 	isSupported: () => Boolean(window.ReactNativeWebView),
 	activate: ({ onActiveChange, onError }) => {
+		// Listen first: the shell is the one that knows whether it got the
+		// hold, and it can lose it later without anyone asking the web.
+		const stopListening = listenToNative((message) => {
+			if (message.type === 'keepAwakeChanged') {
+				onActiveChange(message.isActive)
+			} else if (message.type === 'keepAwakeFailed') {
+				onError(message.reason)
+			}
+		})
+
 		postMessageToNative({ type: 'keepAwakeStart' })
-		onActiveChange(true)
 
 		return () => {
 			postMessageToNative({ type: 'keepAwakeStop' })
-			onActiveChange(false)
+			stopListening()
 		}
 	},
 })

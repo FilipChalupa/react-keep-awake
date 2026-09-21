@@ -2,8 +2,10 @@ export interface KeepAwakeStrategyCallbacks {
 	/**
 	 * Report whether the screen is being held awake right now. A strategy may
 	 * lose the hold and take it back on its own — the browser drops a screen
-	 * wake lock whenever the page is hidden — so this can be called any
-	 * number of times.
+	 * wake lock whenever the page is hidden, and a native shell can lose one
+	 * without the web being asked — so this can be called any number of
+	 * times, and a strategy that only ever says `true` once is claiming more
+	 * than it knows.
 	 */
 	onActiveChange: (isActive: boolean) => void
 	/** Report why holding the screen awake failed. */
