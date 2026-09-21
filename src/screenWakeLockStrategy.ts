@@ -45,10 +45,6 @@ export const screenWakeLockStrategy: KeepAwakeStrategy = {
 			if (sentinel || pendingRequest) {
 				return
 			}
-			if (!screenWakeLockStrategy.isSupported()) {
-				return
-			}
-
 			pendingRequest = (async () => {
 				try {
 					const acquiredSentinel = await navigator.wakeLock.request('screen')

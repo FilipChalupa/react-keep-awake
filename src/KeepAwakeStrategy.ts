@@ -29,5 +29,5 @@ export interface KeepAwakeState {
 	/** Whether the screen is being held awake at this moment. */
 	isActive: boolean
 	/** Why the last attempt failed, or `null` if none has. */
-	error: unknown | null
+	error: unknown
 }

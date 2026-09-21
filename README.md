@@ -78,6 +78,8 @@ setKeepAwakeStrategy({
 
 Call it before the first component asks for the screen — claims are counted per instance, so the strategy cannot be swapped afterwards.
 
+A strategy that throws is treated exactly like one that reports an error: it is recorded in `error` and the app carries on. Keeping the screen awake is a comfort, never a reason to bring down what asked for it.
+
 For a second, separately counted instance — a test, or a story — build one with `createKeepAwake(strategy)` and drive it yourself.
 
 ## Development
