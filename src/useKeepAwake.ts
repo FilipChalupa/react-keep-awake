@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useKeepAwakeInstance } from './KeepAwakeProvider'
 import type { KeepAwakeState } from './KeepAwakeStrategy'
+import { getSharedKeepAwake } from './sharedKeepAwake'
 
 /**
  * Keeps the screen awake while `active`, and reports whether that is
@@ -9,10 +9,8 @@ import type { KeepAwakeState } from './KeepAwakeStrategy'
  * mistake for success.
  */
 export const useKeepAwake = (active = true): KeepAwakeState => {
-	const keepAwake = useKeepAwakeInstance()
-	const [state, setState] = useState<KeepAwakeState>(() =>
-		keepAwake.getState(),
-	)
+	const keepAwake = getSharedKeepAwake()
+	const [state, setState] = useState<KeepAwakeState>(() => keepAwake.getState())
 
 	useEffect(() => {
 		// Whatever happened between rendering and subscribing.

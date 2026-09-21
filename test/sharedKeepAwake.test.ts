@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-	getDefaultKeepAwake,
-	resetDefaultKeepAwake,
-	setDefaultKeepAwakeStrategy,
-} from '../src/defaultKeepAwake'
+	getSharedKeepAwake,
+	resetSharedKeepAwake,
+	setKeepAwakeStrategy,
+} from '../src/sharedKeepAwake'
 import type { KeepAwakeStrategy } from '../src/KeepAwakeStrategy'
 
 const createStrategy = (isSupported = true): KeepAwakeStrategy => ({
@@ -11,17 +11,17 @@ const createStrategy = (isSupported = true): KeepAwakeStrategy => ({
 	activate: vi.fn(() => vi.fn()),
 })
 
-describe('setDefaultKeepAwakeStrategy', () => {
+describe('setKeepAwakeStrategy', () => {
 	beforeEach(() => {
-		resetDefaultKeepAwake()
+		resetSharedKeepAwake()
 		vi.unstubAllGlobals()
 	})
 
-	it('is what the shared instance uses', () => {
+	it('is what the hook uses', () => {
 		const strategy = createStrategy()
-		setDefaultKeepAwakeStrategy(strategy)
+		setKeepAwakeStrategy(strategy)
 
-		getDefaultKeepAwake().request()
+		getSharedKeepAwake().request()
 
 		expect(strategy.activate).toHaveBeenCalledTimes(1)
 	})
@@ -29,19 +29,19 @@ describe('setDefaultKeepAwakeStrategy', () => {
 	it('falls back to the screen wake lock api', () => {
 		vi.stubGlobal('navigator', {})
 
-		expect(getDefaultKeepAwake().getState().isSupported).toBe(false)
+		expect(getSharedKeepAwake().getState().isSupported).toBe(false)
 	})
 
 	it('refuses to change once the instance is in use', () => {
-		setDefaultKeepAwakeStrategy(createStrategy())
-		getDefaultKeepAwake()
+		setKeepAwakeStrategy(createStrategy())
+		getSharedKeepAwake()
 
 		expect(() => {
-			setDefaultKeepAwakeStrategy(createStrategy())
+			setKeepAwakeStrategy(createStrategy())
 		}).toThrow(/already in use/)
 	})
 
 	it('hands out one instance', () => {
-		expect(getDefaultKeepAwake()).toBe(getDefaultKeepAwake())
+		expect(getSharedKeepAwake()).toBe(getSharedKeepAwake())
 	})
 })

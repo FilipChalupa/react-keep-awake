@@ -55,12 +55,12 @@ const { isSupported, isActive, error } = useKeepAwake()
 
 ## Keeping the screen awake some other way
 
-Where the Screen Wake Lock API is missing — a web app inside a native shell, say — supply your own strategy. Everything below the provider uses it instead, and the hook reports its state the same way:
+Where the Screen Wake Lock API is missing — a web app inside a native shell, say — supply your own strategy while the app starts:
 
-```jsx
-import { KeepAwakeProvider } from 'react-keep-awake'
+```js
+import { setKeepAwakeStrategy } from 'react-keep-awake'
 
-const nativeStrategy = {
+setKeepAwakeStrategy({
 	isSupported: () => Boolean(window.ReactNativeWebView),
 	activate: ({ onActiveChange, onError }) => {
 		postMessageToNative({ type: 'keepAwakeStart' })
@@ -71,26 +71,14 @@ const nativeStrategy = {
 			onActiveChange(false)
 		}
 	},
-}
-
-const MyApp = () => (
-	<KeepAwakeProvider strategy={nativeStrategy}>
-		<Screens />
-	</KeepAwakeProvider>
-)
+})
 ```
 
-`activate` is called for the first component asking to keep the screen awake and its result is called once the last one goes away, so a strategy never sees the counting. Keep the strategy object itself stable — a new one starts over.
+`activate` is called for the first component asking to keep the screen awake and its result is called once the last one goes away, so a strategy never sees the counting. `useKeepAwake` reports its state the same way it reports the built-in one.
 
-When the answer is the same for the whole app, skip the provider and say so while the app starts:
+Call it before the first component asks for the screen — claims are counted per instance, so the strategy cannot be swapped afterwards.
 
-```js
-import { setDefaultKeepAwakeStrategy } from 'react-keep-awake'
-
-setDefaultKeepAwakeStrategy(nativeStrategy)
-```
-
-Everything without a provider above it then uses that. Call it before the first component asks for the screen — claims are counted per instance, so it cannot be swapped afterwards.
+For a second, separately counted instance — a test, or a story — build one with `createKeepAwake(strategy)` and drive it yourself.
 
 ## Development
 
