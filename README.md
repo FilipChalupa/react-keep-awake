@@ -41,9 +41,52 @@ const MyApp = () => {
 }
 ```
 
+## Knowing whether it worked
+
+A screen wake lock is unavailable in more places than it is available — [not in any WebView](https://caniwebview.com/features/web-feature-screen-wake-lock/), and the browser can refuse one on a device that is low on battery. The hook reports what actually happened, so silence is not mistaken for success:
+
+```jsx
+const { isSupported, isActive, error } = useKeepAwake()
+```
+
+- `isSupported` — whether this environment can keep the screen awake at all.
+- `isActive` — whether the screen is being held awake at this moment. The browser hands the lock back whenever the page is hidden, so this goes false and true again on its own.
+- `error` — why the last attempt failed, or `null`.
+
+## Keeping the screen awake some other way
+
+Where the Screen Wake Lock API is missing — a web app inside a native shell, say — supply your own strategy. Everything below the provider uses it instead, and the hook reports its state the same way:
+
+```jsx
+import { KeepAwakeProvider } from 'react-keep-awake'
+
+const nativeStrategy = {
+	isSupported: () => Boolean(window.ReactNativeWebView),
+	activate: ({ onActiveChange, onError }) => {
+		postMessageToNative({ type: 'keepAwakeStart' })
+		onActiveChange(true)
+
+		return () => {
+			postMessageToNative({ type: 'keepAwakeStop' })
+			onActiveChange(false)
+		}
+	},
+}
+
+const MyApp = () => (
+	<KeepAwakeProvider strategy={nativeStrategy}>
+		<Screens />
+	</KeepAwakeProvider>
+)
+```
+
+`activate` is called for the first component asking to keep the screen awake and its result is called once the last one goes away, so a strategy never sees the counting. Keep the strategy object itself stable — a new one starts over.
+
 ## Development
 
 ```bash
 npm ci
 npm run dev
 ```
+
+Run the tests with `npm test`.

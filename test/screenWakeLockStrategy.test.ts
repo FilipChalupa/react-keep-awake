@@ -1,29 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { screenWakeLockStrategy } from '../src/screenWakeLockStrategy'
 
-type ReleaseListener = () => void
+type Listener = () => void
 
 const createSentinel = () => {
-	const listeners: ReleaseListener[] = []
+	const listeners: Listener[] = []
+	const fire = () => {
+		sentinel.released = true
+		for (const listener of [...listeners]) {
+			listener()
+		}
+	}
 	const sentinel = {
 		released: false,
 		release: vi.fn(async () => {
-			sentinel.released = true
-			for (const listener of listeners) {
-				listener()
-			}
+			fire()
 		}),
-		addEventListener: (type: string, listener: ReleaseListener) => {
+		addEventListener: (type: string, listener: Listener) => {
 			if (type === 'release') {
 				listeners.push(listener)
 			}
 		},
 		/** Stands in for the browser letting go of the lock on its own. */
-		releaseFromBrowser: () => {
-			sentinel.released = true
-			for (const listener of listeners) {
-				listener()
-			}
-		},
+		releaseFromBrowser: fire,
 	}
 
 	return sentinel
@@ -32,8 +31,8 @@ const createSentinel = () => {
 type Sentinel = ReturnType<typeof createSentinel>
 
 const setUpEnvironment = () => {
-	const sentinels: Sentinel[] = []
-	const visibilityListeners: ReleaseListener[] = []
+	const granted: Sentinel[] = []
+	const visibilityListeners: Listener[] = []
 	let resolveRequest: ((sentinel: Sentinel) => void) | null = null
 
 	const wakeLock = {
@@ -41,7 +40,7 @@ const setUpEnvironment = () => {
 			(): Promise<Sentinel> =>
 				new Promise((resolve) => {
 					resolveRequest = (sentinel) => {
-						sentinels.push(sentinel)
+						granted.push(sentinel)
 						resolve(sentinel)
 					}
 				}),
@@ -50,12 +49,12 @@ const setUpEnvironment = () => {
 
 	const documentStub = {
 		visibilityState: 'visible',
-		addEventListener: (type: string, listener: ReleaseListener) => {
+		addEventListener: (type: string, listener: Listener) => {
 			if (type === 'visibilitychange') {
 				visibilityListeners.push(listener)
 			}
 		},
-		removeEventListener: (type: string, listener: ReleaseListener) => {
+		removeEventListener: (type: string, listener: Listener) => {
 			if (type === 'visibilitychange') {
 				visibilityListeners.splice(visibilityListeners.indexOf(listener), 1)
 			}
@@ -65,9 +64,22 @@ const setUpEnvironment = () => {
 	vi.stubGlobal('navigator', { wakeLock })
 	vi.stubGlobal('document', documentStub)
 
+	const activeChanges: boolean[] = []
+	const errors: unknown[] = []
+
 	return {
 		wakeLock,
-		sentinels,
+		activeChanges,
+		errors,
+		activate: () =>
+			screenWakeLockStrategy.activate({
+				onActiveChange: (isActive) => {
+					activeChanges.push(isActive)
+				},
+				onError: (error) => {
+					errors.push(error)
+				},
+			}),
 		setVisibility: (visibilityState: 'visible' | 'hidden') => {
 			documentStub.visibilityState = visibilityState
 			for (const listener of [...visibilityListeners]) {
@@ -78,82 +90,57 @@ const setUpEnvironment = () => {
 		grant: async () => {
 			const sentinel = createSentinel()
 			resolveRequest?.(sentinel)
-			// Let the library's own awaits run.
-			await vi.waitFor(() => expect(sentinels).toContain(sentinel))
+			await vi.waitFor(() => expect(granted).toContain(sentinel))
 			await Promise.resolve()
 			return sentinel
+		},
+		reject: async (error: unknown) => {
+			resolveRequest = null
+			wakeLock.request.mockRejectedValueOnce(error)
 		},
 	}
 }
 
-const importFreshModule = async () => {
-	vi.resetModules()
-	return (await import('../src/requestWakeLock')).requestWakeLock
-}
-
-describe('requestWakeLock', () => {
+describe('screenWakeLockStrategy', () => {
 	beforeEach(() => {
 		vi.unstubAllGlobals()
 	})
 
-	it('releases the sentinel once the last holder lets go', async () => {
+	it('releases the sentinel when deactivated', async () => {
 		const environment = setUpEnvironment()
-		const requestWakeLock = await importFreshModule()
-
-		const release = requestWakeLock()
+		const deactivate = environment.activate()
 		const sentinel = await environment.grant()
 		expect(sentinel.released).toBe(false)
 
-		release()
+		deactivate()
 
 		expect(sentinel.release).toHaveBeenCalledTimes(1)
 		expect(sentinel.released).toBe(true)
 	})
 
-	it('keeps the sentinel while another holder is still active', async () => {
+	it('releases a sentinel granted after it was already deactivated', async () => {
 		const environment = setUpEnvironment()
-		const requestWakeLock = await importFreshModule()
-
-		const releaseFirst = requestWakeLock()
-		const releaseSecond = requestWakeLock()
-		const sentinel = await environment.grant()
-
-		releaseFirst()
-		expect(sentinel.released).toBe(false)
-
-		releaseSecond()
-		expect(sentinel.released).toBe(true)
-	})
-
-	it('releases a sentinel granted after the last holder already let go', async () => {
-		const environment = setUpEnvironment()
-		const requestWakeLock = await importFreshModule()
-
-		const release = requestWakeLock()
-		// Nobody wants the screen awake any more, but the request the browser
-		// is still working on knows nothing about it.
-		release()
+		const deactivate = environment.activate()
+		// The request the browser is still working on knows nothing about it.
+		deactivate()
 
 		const sentinel = await environment.grant()
 
 		expect(sentinel.released).toBe(true)
 	})
 
-	it('asks for one sentinel only while a request is in flight', async () => {
+	it('asks for one sentinel only while a request is in flight', () => {
 		const environment = setUpEnvironment()
-		const requestWakeLock = await importFreshModule()
+		environment.activate()
 
-		requestWakeLock()
-		requestWakeLock()
+		environment.setVisibility('visible')
 
 		expect(environment.wakeLock.request).toHaveBeenCalledTimes(1)
 	})
 
 	it('acquires again after the browser released on its own', async () => {
 		const environment = setUpEnvironment()
-		const requestWakeLock = await importFreshModule()
-
-		requestWakeLock()
+		environment.activate()
 		const sentinel = await environment.grant()
 
 		// Hiding the page makes the browser drop the lock by itself.
@@ -164,5 +151,34 @@ describe('requestWakeLock', () => {
 		environment.setVisibility('visible')
 
 		expect(environment.wakeLock.request).toHaveBeenCalledTimes(2)
+	})
+
+	it('reports holding and letting go', async () => {
+		const environment = setUpEnvironment()
+		const deactivate = environment.activate()
+		await environment.grant()
+		expect(environment.activeChanges).toEqual([true])
+
+		deactivate()
+
+		expect(environment.activeChanges).toEqual([true, false])
+	})
+
+	it('reports a refused request', async () => {
+		const environment = setUpEnvironment()
+		const refusal = new Error('NotAllowedError')
+		await environment.reject(refusal)
+
+		environment.activate()
+		await vi.waitFor(() => expect(environment.errors).toHaveLength(1))
+
+		expect(environment.errors).toEqual([refusal])
+		expect(environment.activeChanges).toEqual([])
+	})
+
+	it('is unsupported without the api', () => {
+		vi.stubGlobal('navigator', {})
+
+		expect(screenWakeLockStrategy.isSupported()).toBe(false)
 	})
 })

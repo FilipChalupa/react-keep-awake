@@ -1,2 +1,6 @@
+export * from './createKeepAwake'
 export * from './KeepAwake'
+export * from './KeepAwakeProvider'
+export * from './KeepAwakeStrategy'
+export * from './screenWakeLockStrategy'
 export * from './useKeepAwake'

@@ -9,8 +9,13 @@
 		}
 	},
 	"parser": "@typescript-eslint/parser",
-	"extends": ["eslint:recommended", "plugin:react/recommended"],
-	"plugins": ["react-hooks"],
+	"extends": [
+		"eslint:recommended",
+		"plugin:react/recommended"
+	],
+	"plugins": [
+		"react-hooks"
+	],
 	"parserOptions": {
 		"ecmaVersion": 2020,
 		"sourceType": "module",
@@ -21,5 +26,17 @@
 	"rules": {
 		"react-hooks/rules-of-hooks": "error",
 		"react-hooks/exhaustive-deps": "warn"
-	}
+	},
+	"overrides": [
+		{
+			"files": [
+				"*.ts",
+				"*.tsx"
+			],
+			"rules": {
+				"no-unused-vars": "off",
+				"no-undef": "off"
+			}
+		}
+	]
 }
