@@ -14,7 +14,6 @@ export const screenWakeLockStrategy: KeepAwakeStrategy = {
 	isSupported: () =>
 		typeof navigator !== 'undefined' && 'wakeLock' in navigator,
 	activate: ({ onActiveChange, onError }) => {
-		// eslint-disable-next-line no-undef
 		let sentinel: WakeLockSentinel | null = null
 		// Two overlapping requests would both get past the "already held"
 		// check below. The screen obeys the newer sentinel and the older one
