@@ -99,3 +99,12 @@ npm run dev
 ```
 
 Run the tests with `npm test`.
+
+## Releasing
+
+```bash
+npm version minor   # or patch, or major
+git push --follow-tags
+```
+
+Pushing the tag is the release: CI runs the checks and publishes to npm. It authenticates as a [trusted publisher](https://docs.npmjs.com/trusted-publishers) over OpenID Connect, so no npm token is kept in the repository — which also means the workflow file has to keep the name npmjs.com was told about.
