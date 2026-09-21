@@ -1,4 +1,5 @@
 export * from './createKeepAwake'
+export * from './defaultKeepAwake'
 export * from './KeepAwake'
 export * from './KeepAwakeProvider'
 export * from './KeepAwakeStrategy'

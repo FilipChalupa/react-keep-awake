@@ -82,6 +82,16 @@ const MyApp = () => (
 
 `activate` is called for the first component asking to keep the screen awake and its result is called once the last one goes away, so a strategy never sees the counting. Keep the strategy object itself stable — a new one starts over.
 
+When the answer is the same for the whole app, skip the provider and say so while the app starts:
+
+```js
+import { setDefaultKeepAwakeStrategy } from 'react-keep-awake'
+
+setDefaultKeepAwakeStrategy(nativeStrategy)
+```
+
+Everything without a provider above it then uses that. Call it before the first component asks for the screen — claims are counted per instance, so it cannot be swapped afterwards.
+
 ## Development
 
 ```bash
