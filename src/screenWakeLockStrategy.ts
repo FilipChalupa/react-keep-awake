@@ -5,7 +5,9 @@ import type { KeepAwakeStrategy } from './KeepAwakeStrategy'
  * [Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).
  *
  * The browser hands the lock back whenever the page stops being visible, so
- * this watches visibility and asks for it again on the way back.
+ * this watches visibility and asks for it again on the way back. A request
+ * can also be refused outright (some browsers want a user gesture first, or
+ * the device is saving battery), so the next tap or key press tries again.
  *
  * Note it is unavailable inside WebViews on every platform, which a native
  * shell can work around by passing its own strategy to `KeepAwakeProvider`.
@@ -74,16 +76,24 @@ export const screenWakeLockStrategy: KeepAwakeStrategy = {
 			}
 		}
 
-		const handleVisibilityChange = () => {
+		// Coming back to the page, and any interaction while the lock is not
+		// held: a gesture is what a browser that refused before may be waiting
+		// for. While the lock is held, `request` returns straight away.
+		const retryEvents = ['visibilitychange', 'pointerdown', 'keydown'] as const
+		const handleRetry = () => {
 			request()
 		}
 
-		document.addEventListener('visibilitychange', handleVisibilityChange)
+		for (const type of retryEvents) {
+			document.addEventListener(type, handleRetry)
+		}
 		request()
 
 		return () => {
 			isDeactivated = true
-			document.removeEventListener('visibilitychange', handleVisibilityChange)
+			for (const type of retryEvents) {
+				document.removeEventListener(type, handleRetry)
+			}
 			release()
 		}
 	},
