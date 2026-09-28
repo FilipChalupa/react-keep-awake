@@ -32,7 +32,12 @@ type Sentinel = ReturnType<typeof createSentinel>
 
 const setUpEnvironment = () => {
 	const granted: Sentinel[] = []
-	const visibilityListeners: Listener[] = []
+	const documentListeners = new Map<string, Listener[]>()
+	const dispatch = (type: string) => {
+		for (const listener of [...(documentListeners.get(type) ?? [])]) {
+			listener()
+		}
+	}
 	let resolveRequest: ((sentinel: Sentinel) => void) | null = null
 
 	const wakeLock = {
@@ -50,14 +55,18 @@ const setUpEnvironment = () => {
 	const documentStub = {
 		visibilityState: 'visible',
 		addEventListener: (type: string, listener: Listener) => {
-			if (type === 'visibilitychange') {
-				visibilityListeners.push(listener)
-			}
+			documentListeners.set(type, [
+				...(documentListeners.get(type) ?? []),
+				listener,
+			])
 		},
 		removeEventListener: (type: string, listener: Listener) => {
-			if (type === 'visibilitychange') {
-				visibilityListeners.splice(visibilityListeners.indexOf(listener), 1)
-			}
+			documentListeners.set(
+				type,
+				(documentListeners.get(type) ?? []).filter(
+					(existing) => existing !== listener,
+				),
+			)
 		},
 	}
 
@@ -82,10 +91,17 @@ const setUpEnvironment = () => {
 			}),
 		setVisibility: (visibilityState: 'visible' | 'hidden') => {
 			documentStub.visibilityState = visibilityState
-			for (const listener of [...visibilityListeners]) {
-				listener()
-			}
+			dispatch('visibilitychange')
 		},
+		/** Stands in for the user tapping the page or pressing a key. */
+		interact: (type: 'pointerdown' | 'keydown' = 'pointerdown') => {
+			dispatch(type)
+		},
+		listenerCount: () =>
+			[...documentListeners.values()].reduce(
+				(count, listeners) => count + listeners.length,
+				0,
+			),
 		/** Settles the pending `navigator.wakeLock.request` call. */
 		grant: async () => {
 			const sentinel = createSentinel()
@@ -174,6 +190,42 @@ describe('screenWakeLockStrategy', () => {
 
 		expect(environment.errors).toEqual([refusal])
 		expect(environment.activeChanges).toEqual([])
+	})
+
+	it('tries again on the next interaction after a refusal', async () => {
+		const environment = setUpEnvironment()
+		await environment.reject(new Error('NotAllowedError'))
+		environment.activate()
+		await vi.waitFor(() => expect(environment.errors).toHaveLength(1))
+
+		environment.interact('pointerdown')
+		await environment.grant()
+
+		expect(environment.wakeLock.request).toHaveBeenCalledTimes(2)
+		expect(environment.activeChanges).toEqual([true])
+	})
+
+	it('does not ask again on interaction while the lock is held', async () => {
+		const environment = setUpEnvironment()
+		environment.activate()
+		await environment.grant()
+
+		environment.interact('pointerdown')
+		environment.interact('keydown')
+
+		expect(environment.wakeLock.request).toHaveBeenCalledTimes(1)
+	})
+
+	it('stops listening when deactivated', async () => {
+		const environment = setUpEnvironment()
+		const deactivate = environment.activate()
+		await environment.grant()
+
+		deactivate()
+
+		expect(environment.listenerCount()).toBe(0)
+		environment.interact('pointerdown')
+		expect(environment.wakeLock.request).toHaveBeenCalledTimes(1)
 	})
 
 	it('is unsupported without the api', () => {
